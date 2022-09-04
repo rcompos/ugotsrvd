@@ -105,7 +105,7 @@ func Create(c *gin.Context) {
 	gitRepo := "autocharts"
 	gitUrl := "https://github.com/rcompos/" + gitRepo
 	username := "rcompos"
-	token := "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"
+	token := "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"
 	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
@@ -150,10 +150,17 @@ func Create(c *gin.Context) {
 }
 
 //  DEVTEST
-type User struct {
-	Name       string
-	Occupation string
+type Data struct {
+	Words []string
 } //  DEVTEST
+
+type ArgoCDApp struct {
+	Appname        string
+	Project        string
+	RepoURL        string
+	TargetRevision string
+	Path           string
+}
 
 func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	// Need to templatize the ArgoCD application yaml
@@ -161,17 +168,34 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	log.Println("templateFile:", templateFile)
 	log.Println("appsBaseDir:", appsBaseDir)
 
-	user := User{"John Doe", "gardener"}
-
-	tmp := template.New("simple")
-	tmp, err := tmp.Parse("{{.Name}} is a {{.Occupation}}")
+	// tmp, err := template.ParseFiles("argocd-templates/words.txt")
+	tmp, err := template.ParseFiles("argocd-templates/argocd-application.yaml")
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 
-	err2 := tmp.Execute(os.Stdout, user)
-	if err2 != nil {
-		log.Println(err2)
+	argoCDAppFile := appsBaseDir + "/" + appname
+	log.Println("argoCDAppFile:", argoCDAppFile)
+	f, err := os.Create(argoCDAppFile)
+	defer f.Close()
+
+	if err != nil {
+		log.Println("create file: ", err)
+		return ""
+	}
+
+	// data := Data{Words: []string{"sky", "blue", "forest", "tavern", "cup", "cloud"}}
+	data := ArgoCDApp{
+		Appname:        appname,
+		Project:        "defaultus",
+		RepoURL:        "https://github.com/rcompos/autocharts",
+		TargetRevision: "HEAD",
+		Path:           appname,
+	}
+	err = tmp.Execute(f, data)
+	if err != nil {
+		log.Print("execute: ", err)
+		return ""
 	}
 
 	return appsBaseDir + appname
