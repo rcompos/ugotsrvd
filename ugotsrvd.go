@@ -117,13 +117,12 @@ func Create(c *gin.Context) {
 	extension := path.Ext(chartnameTmp)
 	chartname := chartnameTmp[0 : len(chartnameTmp)-len(extension)]
 
+	repoDir := fmt.Sprintf("%v/%v", repoBaseDir, gitRepo)
+	cloneOrPullRepo(gitUrl, repoDir, username, token)
+
+	// Cluster-API Cluster Helm Chart
 	// Create Helm chart
 	pathToChart := createHelmChart(chartname, filename, chartsBaseDir)
-
-	// Copy created Helm chart to repoDir
-	repoDir := fmt.Sprintf("%v/%v", repoBaseDir, gitRepo)
-
-	cloneOrPullRepo(gitUrl, repoDir, username, token)
 
 	// Check if chart already exists
 	chartDir := fmt.Sprintf("%v/%v", repoDir, chartname)
@@ -136,23 +135,30 @@ func Create(c *gin.Context) {
 	messageChart := "Add new Helm Chart." + chartname
 	gitCommit(repoDir, messageChart, chartname)
 
-	// // Create ArgoCD application
-	appname := chartname
+	// ArgoCD Helm Chart
+	// Create ArgoCD application yaml from template
+	appChartName := chartname + "-app"
 	templateFile := "argocd-templates/argocd-application.tmpl"
-	pathToApp := CreateArgoCDApp(appname, templateFile, appsBaseDir)
+	pathToApp := CreateArgoCDApp(appChartName, templateFile, appsBaseDir)
 	log.Println("pathToApp:", pathToApp)
-	// copyToRepo(pathToApp, repoDir)
-	// messageApp := "Add new ArgoCD app." + appname
-	// gitCommit(repoDir, messageApp, appname)
 
+	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir)
+
+	// Check if chart already exists
+	appChartDir := fmt.Sprintf("%v/%v", repoDir, appChartName)
+	if fileExists(appChartDir) {
+		log.Println("Chart already exists!", appChartDir)
+		c.String(http.StatusOK, "Chart already exists! %s", appChartDir)
+		return
+	}
+	copyToRepo(pathToAppChart, repoDir)
+	messageAppChart := "Add new ArgoCD app." + appChartName
+	gitCommit(repoDir, messageAppChart, appChartName)
+
+	// Git push workload cluster Helm chart
 	gitPush(repoDir, username, token)
-	c.String(http.StatusOK, "Helm chart pushed! %s", chartDir)
+	c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed! %s", chartDir)
 }
-
-//  DEVTEST
-type Data struct {
-	Words []string
-} //  DEVTEST
 
 type ArgoCDApp struct {
 	Appname        string
@@ -163,12 +169,10 @@ type ArgoCDApp struct {
 }
 
 func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
-	// Need to templatize the ArgoCD application yaml
 	log.Println("appname:", appname)
 	log.Println("templateFile:", templateFile)
 	log.Println("appsBaseDir:", appsBaseDir)
 
-	// tmp, err := template.ParseFiles("argocd-templates/words.txt")
 	tmp, err := template.ParseFiles("argocd-templates/argocd-application.yaml")
 	if err != nil {
 		log.Fatal(err)
@@ -184,7 +188,6 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 		return ""
 	}
 
-	// data := Data{Words: []string{"sky", "blue", "forest", "tavern", "cup", "cloud"}}
 	data := ArgoCDApp{
 		Appname:        appname,
 		Project:        "defaultus",
@@ -198,7 +201,7 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 		return ""
 	}
 
-	return appsBaseDir + appname
+	return argoCDAppFile
 
 }
 
