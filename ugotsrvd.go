@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -121,13 +122,19 @@ func Create(c *gin.Context) {
 		c.String(http.StatusOK, "Chart already exists! %s", chartDir)
 		return
 	}
-	copyChartToRepo(pathToChart, repoDir)
+	copyToRepo(pathToChart, repoDir)
+	messageChart := "Add new Helm Chart." + chartname
+	gitCommit(repoDir, messageChart, chartname)
 
-	// Create ArgoCD application
-	// createArgoCDApp()
+	// // Create ArgoCD application
+	appname := chartname
+	template := "argocd-application.tmpl"
+	pathToApp := createArgoCDApp(appname, template, appsBaseDir)
+	log.Println("pathToApp:", pathToApp)
+	// copyToRepo(pathToApp, repoDir)
+	// messageApp := "Add new ArgoCD app." + appname
+	// gitCommit(repoDir, messageApp, appname)
 
-	message := "Add new Helm Chart." + chartname
-	gitCommit(repoDir, message, chartname)
 	gitPush(repoDir, username, token)
 	c.String(http.StatusOK, "Helm chart pushed! %s", chartDir)
 }
@@ -150,7 +157,19 @@ func fileExists(f string) bool {
 	return false
 }
 
-// func createArgoCDApplication() {
+func CreateArgoCDApp(appname, template, appsBaseDir string) string {
+	// Need to templatize the ArgoCD application yaml
+
+	router.GET("/raw", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "raw.tmpl", gin.H{
+			"now": time.Date(2017, 07, 01, 0, 0, 0, 0, time.UTC),
+		})
+	})
+
+	return ""
+}
+
+// func copyArgoCDAppToRepo() {
 // }
 
 func createHelmChart(chartName, yamlFile, chartsDir string) string {
@@ -202,26 +221,26 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 
 }
 
-func copyChartToRepo(chartDirectory, repoDir string) {
-	// Copy Helm chart to chart git repo
-	cmdCopyYaml := fmt.Sprintf("cp -a %v %v", chartDirectory, repoDir)
-	log.Println(cmdCopyYaml)
-	outCopyYaml, errCopyYaml := exec.Command("bash", "-c", cmdCopyYaml).Output()
-	if errCopyYaml != nil {
-		log.Printf("Failed to execute command: %s", cmdCopyYaml)
-		log.Printf("Error: %v", errCopyYaml)
+func copyToRepo(sourceDir, repoDir string) {
+	// Copy directory to git repo
+	cmdCopy := fmt.Sprintf("cp -a %v %v", sourceDir, repoDir)
+	log.Println(cmdCopy)
+	outCopy, errCopy := exec.Command("bash", "-c", cmdCopy).Output()
+	if errCopy != nil {
+		log.Printf("Failed to execute command: %s", cmdCopy)
+		log.Printf("Error: %v", errCopy)
 	}
-	log.Println(string(outCopyYaml))
+	log.Println(string(outCopy))
 
-	// Delete Helm chart directory
-	cmdDeleteChart := fmt.Sprintf("rm -fr %v", chartDirectory)
-	log.Println(cmdDeleteChart)
-	outDeleteChart, errDeleteChart := exec.Command("bash", "-c", cmdDeleteChart).Output()
-	if errDeleteChart != nil {
-		log.Printf("Failed to execute command: %s", cmdDeleteChart)
-		log.Printf("Error: %v", errDeleteChart)
+	// Delete source directory
+	cmdDelete := fmt.Sprintf("rm -fr %v", sourceDir)
+	log.Println(cmdDelete)
+	outDelete, errDelete := exec.Command("bash", "-c", cmdDelete).Output()
+	if errDelete != nil {
+		log.Printf("Failed to execute command: %s", cmdDelete)
+		log.Printf("Error: %v", errDelete)
 	}
-	log.Println(string(outDeleteChart))
+	log.Println(string(outDelete))
 }
 
 func dirExists(dirname string) bool {
