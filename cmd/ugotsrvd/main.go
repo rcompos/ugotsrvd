@@ -40,7 +40,6 @@ func main() {
 	router.POST("/create", ugotsrvd.Create)
 	router.GET("/array", ugotsrvd.GetArray)      // Testing templates
 	router.GET("/listfiles", ugotsrvd.ListFiles) // List CAPI YAML files
-	router.GET("/create/argocdapp", ugotsrvd.CreateArgoCDApp)
 
 	router.Run(":8080")
 }

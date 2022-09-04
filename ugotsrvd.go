@@ -10,15 +10,22 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"time"
+	"text/template"
 
 	"github.com/gin-gonic/gin"
 )
 
-const uploadDir = "upload"
-const chartsBaseDir = "generated/charts"
-const appsBaseDir = "generated/apps"
-const repoBaseDir = "repos"
+// const basedDir = "/Users/composr/work/ugotsrvd-data/"
+
+// const uploadDir = "upload"
+// const chartsBaseDir = "generated/charts"
+// const appsBaseDir = "generated/apps"
+// const repoBaseDir = "repos"
+
+const uploadDir = "/Users/composr/work/ugotsrvd-data/upload"
+const chartsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/charts"
+const appsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/apps"
+const repoBaseDir = "/Users/composr/work/ugotsrvd-data/repos"
 
 func Package(c *gin.Context) {
 	fileList := filesInDir(uploadDir)
@@ -92,11 +99,14 @@ func Create(c *gin.Context) {
 	log.Println("Config files:\n", fileList)
 	file := c.PostForm("file")
 
+	// ################################################
+	// // TODO: Need to move variable definitions
 	filename := uploadDir + "/" + file
 	gitRepo := "autocharts"
 	gitUrl := "https://github.com/rcompos/" + gitRepo
 	username := "rcompos"
-	token := "c82f1f163e5884760dbc8d7456740b5083952b25"
+	token := "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"
+	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
 		c.String(http.StatusOK, "File %s not found!", filename)
@@ -128,8 +138,8 @@ func Create(c *gin.Context) {
 
 	// // Create ArgoCD application
 	appname := chartname
-	template := "argocd-application.tmpl"
-	pathToApp := createArgoCDApp(appname, template, appsBaseDir)
+	templateFile := "argocd-templates/argocd-application.tmpl"
+	pathToApp := CreateArgoCDApp(appname, templateFile, appsBaseDir)
 	log.Println("pathToApp:", pathToApp)
 	// copyToRepo(pathToApp, repoDir)
 	// messageApp := "Add new ArgoCD app." + appname
@@ -139,34 +149,33 @@ func Create(c *gin.Context) {
 	c.String(http.StatusOK, "Helm chart pushed! %s", chartDir)
 }
 
-func createCfgDir(p string) {
-	// p path to file
-	if _, err := os.Stat(p); os.IsNotExist(err) {
-		os.MkdirAll(p, 0777) // Create directory
-	}
-}
+//  DEVTEST
+type User struct {
+	Name       string
+	Occupation string
+} //  DEVTEST
 
-func fileExists(f string) bool {
-	if _, err := os.Stat(f); err == nil {
-		// path/to/whatever exists
-		return true
-	} else if errors.Is(err, os.ErrNotExist) {
-		// path/to/whatever does *not* exist
-		return false
-	}
-	return false
-}
-
-func CreateArgoCDApp(appname, template, appsBaseDir string) string {
+func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	// Need to templatize the ArgoCD application yaml
+	log.Println("appname:", appname)
+	log.Println("templateFile:", templateFile)
+	log.Println("appsBaseDir:", appsBaseDir)
 
-	router.GET("/raw", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "raw.tmpl", gin.H{
-			"now": time.Date(2017, 07, 01, 0, 0, 0, 0, time.UTC),
-		})
-	})
+	user := User{"John Doe", "gardener"}
 
-	return ""
+	tmp := template.New("simple")
+	tmp, err := tmp.Parse("{{.Name}} is a {{.Occupation}}")
+	if err != nil {
+		log.Println(err)
+	}
+
+	err2 := tmp.Execute(os.Stdout, user)
+	if err2 != nil {
+		log.Println(err2)
+	}
+
+	return appsBaseDir + appname
+
 }
 
 // func copyArgoCDAppToRepo() {
@@ -243,6 +252,24 @@ func copyToRepo(sourceDir, repoDir string) {
 	log.Println(string(outDelete))
 }
 
+func createCfgDir(p string) {
+	// p path to file
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		os.MkdirAll(p, 0777) // Create directory
+	}
+}
+
+func fileExists(f string) bool {
+	if _, err := os.Stat(f); err == nil {
+		// path/to/whatever exists
+		return true
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		return false
+	}
+	return false
+}
+
 func dirExists(dirname string) bool {
 	folderInfo, err := os.Stat(dirname)
 	if os.IsNotExist(err) {
@@ -280,6 +307,7 @@ func filesInDir(dir string) []string {
 	return listOfFiles
 }
 
+// For DEVTEST
 func GetArray(c *gin.Context) {
 	var values []int
 	for i := 0; i < 5; i++ {
