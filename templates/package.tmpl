@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Package Cluster-API Cluster Manifests</title>
+</head>
+<body>
+<h1>Package Uploaded Cluster-API Cluster Manifests</h1>
+<p>Packaging step for Cluster-API cluster manifest files previously uploaded.</p>
+<ol>
+  <li>Create Helm chart</li>
+  <li>Create ArgoCD application</li>
+  <li>Git push to Helm chart repo</li>
+</ol>
+
+<form action="/create" method="post" enctype="multipart/form-data">
+
+    <h5>Cluster-API manifest 
+    <div class="col-sm-9">
+      <select multiple class="form-control" name="file" id="file">
+        {{range .yamlList}}
+          <option>{{.}}</option>
+        {{end}}
+      </select>
+    </div>
+
+    <!-- <p>>Provider:</p>
+    <input type="radio" id="aws" name="provider" value="AWS"><br>
+    <label for="aws">AWS</label><br>
+    <input type="radio" id="gcp" name="provider" value="GCP"><br>
+    <label for="gcp">GCP</label><br>
+    <input type="radio" id="azure" name="provider" value="Azure"><br>
+    <label for="azure">Azure</label><br>
+    <input type="radio" id="oci" name="provider" value="OCI"><br>
+    <label for="azure">OCI</label><br> -->
+
+    <h4>Environment:</h4>
+
+    <input type="radio" id="dataeng-prod-0" name="environment" value="dataeng-prod-0">
+    <label for="dataeng-prod-0">dataeng-prod-0</label><br>
+    <input type="radio" id="dataeng-stage-0" name="environment" value="dataeng-stage-0">
+    <label for="dataeng-stage-0">dataeng-stage-0</label><br>
+    <input type="radio" id="dataeng-dev-0" name="environment" value="dataeng-dev-0">
+    <label for="dataeng-dev-0">dataeng-dev-0</label><br>
+
+    <input type="radio" id="adas-prod-0" name="environment" value="adas-prod-0">
+    <label for="adas-prod-0">adas-prod-0</label><br>
+    <input type="radio" id="adas-stage-0" name="environment" value="adas-stage-0">
+    <label for="adas-stage-0">adas-stage-0</label><br>
+    <input type="radio" id="adas-dev-0" name="environment" value="adas-dev-0">
+    <label for="adas-dev-0">adas-dev-0</label><br>
+
+    <input type="submit" value="Submit">
+
+</form>
+</body>
