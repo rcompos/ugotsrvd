@@ -105,7 +105,7 @@ func Create(c *gin.Context) {
 	gitRepo := "autocharts"
 	gitUrl := "https://github.com/rcompos/" + gitRepo
 	username := "rcompos"
-	// token := GITHUB_TOKEN
+	token := os.Getenv("GITHUB_TOKEN")
 	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
