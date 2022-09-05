@@ -161,12 +161,13 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	defer f.Close()
 
 	data := ArgoCDApp{
-		Appname:              appname,
-		Project:              "defaultus",
-		RepoURL:              "https://github.com/rcompos/autocharts",
-		TargetRevision:       "main",
-		Path:                 appname,
-		ReleaseName:          appname,
+		Appname:        appname,
+		Project:        "default",
+		RepoURL:        "https://github.com/rcompos/autocharts",
+		TargetRevision: "main",
+		Path:           appname,
+		ReleaseName:    appname,
+		// ValueFiles:           []string{"values.yaml", "values-prod-0.yaml"},
 		ValueFiles:           []string{"values.yaml"},
 		HelmVersion:          "v3",
 		DestinationServer:    "https://kubernetes.default.svc",
