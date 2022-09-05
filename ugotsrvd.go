@@ -1,9 +1,7 @@
 package ugotsrvd
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -15,17 +13,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// const basedDir = "/Users/composr/work/ugotsrvd-data/"
-
-// const uploadDir = "upload"
-// const chartsBaseDir = "generated/charts"
-// const appsBaseDir = "generated/apps"
-// const repoBaseDir = "repos"
-
 const uploadDir = "/Users/composr/work/ugotsrvd-data/upload"
 const chartsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/charts"
 const appsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/apps"
 const repoBaseDir = "/Users/composr/work/ugotsrvd-data/repos"
+
+const gitRepo = "autocharts"
+const gitAccount = "https://github.com/rcompos"
+const gitUsername = "rcompos"
+
+type ArgoCDApp struct {
+	Appname        string
+	Project        string
+	RepoURL        string
+	TargetRevision string
+	Path           string
+}
 
 func Package(c *gin.Context) {
 	fileList := filesInDir(uploadDir)
@@ -39,35 +42,6 @@ func Package(c *gin.Context) {
 	}
 	log.Println("CAPI YAML manifests:\n", yamlList)
 	c.HTML(http.StatusOK, "package.tmpl", gin.H{"yamlList": yamlList})
-}
-
-func IndexHandler(c *gin.Context) {
-	// Handle /index
-	c.HTML(200, "index.html", nil)
-}
-
-func writeToFile(f string, d []byte) {
-	// d1 := []byte("hello\ngo\n")
-	// err := os.WriteFile("./tmp/dat1", d, 0644)
-	err := os.Remove(f)
-	check(err)
-	err2 := os.WriteFile(f, d, 0644)
-	check(err2)
-}
-
-func check(e error) {
-	if e != nil {
-		log.Println(e)
-	}
-}
-
-func LogEnvVars() {
-	cmd := exec.Command("env")
-	stdout0, err := cmd.Output()
-	if err != nil {
-		log.Println(err.Error())
-	}
-	log.Println(string(stdout0))
 }
 
 // TODO: Change to multiple file upload
@@ -99,14 +73,12 @@ func Create(c *gin.Context) {
 	log.Println("Config files:\n", fileList)
 	file := c.PostForm("file")
 
-	// ################################################
-	// // TODO: Need to move variable definitions
 	filename := uploadDir + "/" + file
-	gitRepo := "autocharts"
-	gitUrl := "https://github.com/rcompos/" + gitRepo
-	username := "rcompos"
+	// gitRepo := "autocharts"
+	// gitUrl := "https://github.com/rcompos/" + gitRepo
+	gitUrl := gitAccount + "/" + gitRepo
+	// gitUsername := "rcompos"
 	token := os.Getenv("GITHUB_TOKEN")
-	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
 		c.String(http.StatusOK, "File %s not found!", filename)
@@ -118,7 +90,7 @@ func Create(c *gin.Context) {
 	chartname := chartnameTmp[0 : len(chartnameTmp)-len(extension)]
 
 	repoDir := fmt.Sprintf("%v/%v", repoBaseDir, gitRepo)
-	cloneOrPullRepo(gitUrl, repoDir, username, token)
+	cloneOrPullRepo(gitUrl, repoDir, gitUsername, token)
 
 	// Cluster-API Cluster Helm Chart
 	// Create Helm chart
@@ -158,19 +130,12 @@ func Create(c *gin.Context) {
 	gitCommit(repoDir, messageAppChart, appChartName)
 
 	// Git push workload cluster Helm chart
-	gitPush(repoDir, username, token)
+	gitPush(repoDir, gitUsername, token)
 	c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed! %s", chartDir)
 }
 
-type ArgoCDApp struct {
-	Appname        string
-	Project        string
-	RepoURL        string
-	TargetRevision string
-	Path           string
-}
-
 func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
+	// TODO: Add more template params
 	log.Println("appname:", appname)
 	log.Println("templateFile:", templateFile)
 	log.Println("appsBaseDir:", appsBaseDir)
@@ -183,12 +148,11 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	argoCDAppFile := appsBaseDir + "/" + appname + ".yaml"
 	log.Println("argoCDAppFile:", argoCDAppFile)
 	f, err := os.Create(argoCDAppFile)
-	defer f.Close()
-
 	if err != nil {
 		log.Println("create file: ", err)
 		return ""
 	}
+	defer f.Close()
 
 	data := ArgoCDApp{
 		Appname:        appname,
@@ -202,13 +166,8 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 		log.Print("execute: ", err)
 		return ""
 	}
-
 	return argoCDAppFile
-
 }
-
-// func copyArgoCDAppToRepo() {
-// }
 
 func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	// chartName: Helm chart name
@@ -261,99 +220,4 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	pathToChart := fmt.Sprintf("%v/%v", chartsDir, chartName)
 	return pathToChart
 
-}
-
-func copyToRepo(sourceDir, repoDir string) {
-	// Copy directory to git repo
-	cmdCopy := fmt.Sprintf("cp -a %v %v", sourceDir, repoDir)
-	log.Println(cmdCopy)
-	outCopy, errCopy := exec.Command("bash", "-c", cmdCopy).Output()
-	if errCopy != nil {
-		log.Printf("Failed to execute command: %s", cmdCopy)
-		log.Printf("Error: %v", errCopy)
-	}
-	log.Println(string(outCopy))
-
-	// // Delete source directory
-	// cmdDelete := fmt.Sprintf("rm -fr %v", sourceDir)
-	// log.Println(cmdDelete)
-	// outDelete, errDelete := exec.Command("bash", "-c", cmdDelete).Output()
-	// if errDelete != nil {
-	// 	log.Printf("Failed to execute command: %s", cmdDelete)
-	// 	log.Printf("Error: %v", errDelete)
-	// }
-	// log.Println(string(outDelete))
-}
-
-func createCfgDir(p string) {
-	// p path to file
-	if _, err := os.Stat(p); os.IsNotExist(err) {
-		os.MkdirAll(p, 0777) // Create directory
-	}
-}
-
-func fileExists(f string) bool {
-	if _, err := os.Stat(f); err == nil {
-		// path/to/whatever exists
-		return true
-	} else if errors.Is(err, os.ErrNotExist) {
-		// path/to/whatever does *not* exist
-		return false
-	}
-	return false
-}
-
-func dirExists(dirname string) bool {
-	folderInfo, err := os.Stat(dirname)
-	if os.IsNotExist(err) {
-		log.Println("Folder does not exist.")
-		return false
-	}
-	log.Println(folderInfo)
-	return true
-}
-
-func cloneOrPullRepo(url, directory, username, token string) {
-	if !dirExists(directory) {
-		// Repo dir not exist. Need to git clone.
-		gitClone(url, directory, username, token)
-		log.Println("Git clone url: " + url)
-		log.Println("Git directory: " + directory)
-	} else {
-		// Repo dir exists. Git pull.
-		gitPull(directory)
-	}
-}
-
-func filesInDir(dir string) []string {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	listOfFiles := []string{}
-	for _, file := range files {
-		log.Println(file.Name(), file.IsDir())
-		if !file.IsDir() {
-			listOfFiles = append(listOfFiles, file.Name())
-		}
-	}
-	return listOfFiles
-}
-
-// For DEVTEST
-func GetArray(c *gin.Context) {
-	var values []int
-	for i := 0; i < 5; i++ {
-		values = append(values, i)
-	}
-	c.HTML(http.StatusOK, "array.tmpl", gin.H{"values": values})
-}
-
-func ListFiles(c *gin.Context) {
-	var values []int
-	for i := 0; i < 5; i++ {
-		values = append(values, i)
-	}
-	fileList := filesInDir(uploadDir)
-	c.HTML(http.StatusOK, "listfiles.tmpl", gin.H{"values": fileList})
 }

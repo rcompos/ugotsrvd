@@ -30,11 +30,6 @@ func main() {
 	// router.Static("/", "./public")
 	router.Static("/upload", "./public")
 	// router.Static("/package", "./public")
-
-	// router.GET("/clusters/:id", ugotsrvd.GetClusterByID)
-	// router.POST("/clusters", ugotsrvd.PostClusters) // create new cluster config
-	// router.GET("/", ugotsrvd.IndexHandler)
-
 	router.POST("/upload", ugotsrvd.Upload)
 	router.GET("/package", ugotsrvd.Package)
 	router.POST("/create", ugotsrvd.Create)
