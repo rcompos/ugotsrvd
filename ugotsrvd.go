@@ -105,7 +105,7 @@ func Create(c *gin.Context) {
 	gitRepo := "autocharts"
 	gitUrl := "https://github.com/rcompos/" + gitRepo
 	username := "rcompos"
-	token := "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"
+	token := "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"
 	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
@@ -123,6 +123,7 @@ func Create(c *gin.Context) {
 	// Cluster-API Cluster Helm Chart
 	// Create Helm chart
 	pathToChart := createHelmChart(chartname, filename, chartsBaseDir)
+	log.Println("pathToChart:", pathToChart)
 
 	// Check if chart already exists
 	chartDir := fmt.Sprintf("%v/%v", repoDir, chartname)
@@ -138,11 +139,12 @@ func Create(c *gin.Context) {
 	// ArgoCD Helm Chart
 	// Create ArgoCD application yaml from template
 	appChartName := chartname + "-app"
-	templateFile := "argocd-templates/argocd-application.tmpl"
+	templateFile := "argocd-templates/argocd-application.yaml"
 	pathToApp := CreateArgoCDApp(appChartName, templateFile, appsBaseDir)
 	log.Println("pathToApp:", pathToApp)
 
 	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir)
+	log.Println("pathToAppChart:", pathToAppChart)
 
 	// Check if chart already exists
 	appChartDir := fmt.Sprintf("%v/%v", repoDir, appChartName)
@@ -219,6 +221,7 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	if err != nil {
 		log.Printf("Failed to execute command: %s", cmd)
 		log.Printf("Error: %v", err)
+		return ""
 	}
 	log.Println(string(out))
 
@@ -229,6 +232,7 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	if errClearYaml != nil {
 		log.Printf("Failed to execute command: %s", cmdClearYaml)
 		log.Printf("Error: %v", errClearYaml)
+		return ""
 	}
 	log.Println(string(outClearYaml))
 
@@ -239,6 +243,7 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	if errClearValues != nil {
 		log.Printf("Failed to execute command: %s", cmdClearValues)
 		log.Printf("Error: %v", errClearValues)
+		return ""
 	}
 	log.Println(string(outClearValues))
 
@@ -249,6 +254,7 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 	if errCopyYaml != nil {
 		log.Printf("Failed to execute command: %s", cmdCopyYaml)
 		log.Printf("Error: %v", errCopyYaml)
+		return ""
 	}
 	log.Println(string(outCopyYaml))
 
