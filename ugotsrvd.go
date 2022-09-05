@@ -22,14 +22,6 @@ const gitRepo = "autocharts"
 const gitAccount = "https://github.com/rcompos"
 const gitUsername = "rcompos"
 
-type ArgoCDApp struct {
-	Appname        string
-	Project        string
-	RepoURL        string
-	TargetRevision string
-	Path           string
-}
-
 func Package(c *gin.Context) {
 	fileList := filesInDir(uploadDir)
 	yamlList := []string{}
@@ -134,6 +126,20 @@ func Create(c *gin.Context) {
 	c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed! %s", chartDir)
 }
 
+type ArgoCDApp struct {
+	Appname              string
+	Namespace            string
+	Project              string
+	RepoURL              string
+	TargetRevision       string
+	Path                 string
+	ReleaseName          string
+	ValueFiles           []string
+	HelmVersion          string
+	DestinationServer    string
+	DestinationNamespace string
+}
+
 func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	// TODO: Add more template params
 	log.Println("appname:", appname)
@@ -155,11 +161,16 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 	defer f.Close()
 
 	data := ArgoCDApp{
-		Appname:        appname,
-		Project:        "defaultus",
-		RepoURL:        "https://github.com/rcompos/autocharts",
-		TargetRevision: "HEAD",
-		Path:           appname,
+		Appname:              appname,
+		Project:              "defaultus",
+		RepoURL:              "https://github.com/rcompos/autocharts",
+		TargetRevision:       "main",
+		Path:                 appname,
+		ReleaseName:          appname,
+		ValueFiles:           []string{"values.yaml"},
+		HelmVersion:          "v3",
+		DestinationServer:    "https://kubernetes.default.svc",
+		DestinationNamespace: appname,
 	}
 	err = tmp.Execute(f, data)
 	if err != nil {
