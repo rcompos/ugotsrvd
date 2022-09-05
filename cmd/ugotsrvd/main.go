@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ func main() {
 	if os.Getenv("ENV") == "PRODUCTION" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	fmt.Println("GITHUB_TOKEN:", os.Getenv("GITHUB_TOKEN"))
 
 	ugotsrvd.LogEnvVars()
 

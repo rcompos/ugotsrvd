@@ -105,7 +105,7 @@ func Create(c *gin.Context) {
 	gitRepo := "autocharts"
 	gitUrl := "https://github.com/rcompos/" + gitRepo
 	username := "rcompos"
-	token := "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"
+	// token := GITHUB_TOKEN
 	// ################################################
 
 	if !fileExists(filename) { // file not exists is bad
@@ -180,7 +180,7 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 		log.Fatal(err)
 	}
 
-	argoCDAppFile := appsBaseDir + "/" + appname
+	argoCDAppFile := appsBaseDir + "/" + appname + ".yaml"
 	log.Println("argoCDAppFile:", argoCDAppFile)
 	f, err := os.Create(argoCDAppFile)
 	defer f.Close()
@@ -274,15 +274,15 @@ func copyToRepo(sourceDir, repoDir string) {
 	}
 	log.Println(string(outCopy))
 
-	// Delete source directory
-	cmdDelete := fmt.Sprintf("rm -fr %v", sourceDir)
-	log.Println(cmdDelete)
-	outDelete, errDelete := exec.Command("bash", "-c", cmdDelete).Output()
-	if errDelete != nil {
-		log.Printf("Failed to execute command: %s", cmdDelete)
-		log.Printf("Error: %v", errDelete)
-	}
-	log.Println(string(outDelete))
+	// // Delete source directory
+	// cmdDelete := fmt.Sprintf("rm -fr %v", sourceDir)
+	// log.Println(cmdDelete)
+	// outDelete, errDelete := exec.Command("bash", "-c", cmdDelete).Output()
+	// if errDelete != nil {
+	// 	log.Printf("Failed to execute command: %s", cmdDelete)
+	// 	log.Printf("Error: %v", errDelete)
+	// }
+	// log.Println(string(outDelete))
 }
 
 func createCfgDir(p string) {
