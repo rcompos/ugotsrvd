@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Create Cluster-API Workload Cluster</title>
+</head>
+<body>
+    <h1>Create Cluster-API Workload Cluster</h1>
+    <h3>{{ .msg }}</h3>
+
+
+    <h4>Upload CAPI workload cluster manifests</h4>
+    <p>Upload CAPI workload cluster manifest to be deployed.</p>  
+    <form action="/upload" method="get">
+        <input type="submit" value="Upload">
+    </form>
+    <br>
+
+    <h4>Package CAPI workload cluster and ArgoCD application</h4>
+    <p>Create Helm chart for CAPI cluster<br>
+    Create Helm chart for ArgoCD application<br>
+    Push to Helm chart git repo</p>
+    <p>Select CAPI workload cluster manifest from the uploaded configs. The resulting Helm charts will be pushed to the git repo.</p>  
+    <form action="/package" method="get">
+        <input type="submit" value="Package">
+    </form>
+
+</body>

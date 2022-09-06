@@ -25,12 +25,10 @@ func main() {
 	// Set a lower memory limit for multipart forms (default is 32 MiB)
 	router.MaxMultipartMemory = 8 << 20 // 8 MiB
 
-	// router.LoadHTMLGlob("views/*")
 	router.LoadHTMLGlob("templates/*")
-	// router.Static("/", "./public")
-	router.Static("/upload", "./public")
-	// router.Static("/package", "./public")
-	router.POST("/upload", ugotsrvd.Upload)
+	router.GET("/", ugotsrvd.IndexHandler)
+	router.GET("/upload", ugotsrvd.GetUpload)
+	router.POST("/upload", ugotsrvd.PostUpload)
 	router.GET("/package", ugotsrvd.Package)
 	router.POST("/create", ugotsrvd.Create)
 	router.GET("/array", ugotsrvd.GetArray)      // Testing templates

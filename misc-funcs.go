@@ -12,9 +12,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// func IndexHandler(c *gin.Context) {
+// 	// Handle /index
+// 	c.HTML(200, "index.html", nil)
+// }
+
 func IndexHandler(c *gin.Context) {
-	// Handle /index
-	c.HTML(200, "index.html", nil)
+	// var values []int
+	// for i := 0; i < 5; i++ {
+	// 	values = append(values, i)
+	// }
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{"msg": "Welcome to ugotsrvd."})
 }
 
 func writeToFile(f string, d []byte) {

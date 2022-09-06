@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
@@ -40,7 +41,7 @@ func gitPull(path string) {
 	fmt.Println(commit)
 }
 
-func gitPush(path, username, token string) {
+func gitPush(path, username, token, revision string) string {
 	// CheckArgs("<repository-path>")
 	// path := os.Args[1]
 
@@ -52,13 +53,23 @@ func gitPush(path, username, token string) {
 	r, err := git.PlainOpen(path)
 	CheckIfError(err)
 
+	// Resolve revision into a sha1 commit, only some revisions are resolved
+	// look at the doc to get more details
+	Info("git rev-parse %s", revision)
+	h, err2 := r.ResolveRevision(plumbing.Revision(revision))
+	CheckIfError(err2)
+	commitSHA := h.String()
+	log.Println("commit SHA:", commitSHA)
+
 	Info("git push")
 	// push using default options
 	// err = r.Push(&git.PushOptions{})
 	err = r.Push(&git.PushOptions{
-		Auth: auth,
+		Auth:     auth,
+		Progress: os.Stdout,
 	})
 	CheckIfError(err)
+	return commitSHA
 }
 
 // // An example of how to create and remove branches or any other kind of reference.
@@ -162,7 +173,7 @@ func gitClone(url, directory, username, token string) {
 // }
 
 // Git Commit
-func gitCommit(gitDirectory, message, addDir string) {
+func gitCommit(gitDirectory, message string, files []string) {
 
 	// Opens an already existing repository.
 	r, err := git.PlainOpen(gitDirectory)
@@ -175,9 +186,11 @@ func gitCommit(gitDirectory, message, addDir string) {
 	// Info("git add example-git-file")
 	// Info("git add " + chartname)
 	// _, err = w.Add(chartname)
-	Info("git add " + addDir)
-	_, err = w.Add(addDir)
-	CheckIfError(err)
+	for _, f := range files {
+		Info("git add " + f)
+		_, err = w.Add(f)
+		CheckIfError(err)
+	}
 
 	// We can verify the current status of the worktree using the method Status.
 	Info("git status --porcelain")

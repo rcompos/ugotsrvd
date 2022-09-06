@@ -21,6 +21,8 @@ const repoBaseDir = "/Users/composr/work/ugotsrvd-data/repos"
 const gitRepo = "autocharts"
 const gitAccount = "https://github.com/rcompos"
 const gitUsername = "rcompos"
+const revision = "HEAD"
+const argoCDurl = "https://argocd.example.com"
 
 func Package(c *gin.Context) {
 	fileList := filesInDir(uploadDir)
@@ -36,9 +38,17 @@ func Package(c *gin.Context) {
 	c.HTML(http.StatusOK, "package.tmpl", gin.H{"yamlList": yamlList})
 }
 
+func GetUpload(c *gin.Context) {
+	var values []int
+	for i := 0; i < 5; i++ {
+		values = append(values, i)
+	}
+	c.HTML(http.StatusOK, "upload.tmpl", gin.H{"msg": "Welcome to ugotsrvd."})
+}
+
 // TODO: Change to multiple file upload
 // https://github.com/gin-gonic/examples/tree/master/upload-file/multiple
-func Upload(c *gin.Context) {
+func PostUpload(c *gin.Context) {
 	name := c.PostForm("name")
 	email := c.PostForm("email")
 
@@ -97,8 +107,6 @@ func Create(c *gin.Context) {
 		return
 	}
 	copyToRepo(pathToChart, repoDir)
-	messageChart := "Add new Helm Chart." + chartname
-	gitCommit(repoDir, messageChart, chartname)
 
 	// ArgoCD Helm Chart
 	// Create ArgoCD application yaml from template
@@ -118,12 +126,17 @@ func Create(c *gin.Context) {
 		return
 	}
 	copyToRepo(pathToAppChart, repoDir)
+
+	filesToAdd := []string{chartname, appChartName}
 	messageAppChart := "Add new ArgoCD app." + appChartName
-	gitCommit(repoDir, messageAppChart, appChartName)
+	gitCommit(repoDir, messageAppChart, filesToAdd)
 
 	// Git push workload cluster Helm chart
-	gitPush(repoDir, gitUsername, token)
-	c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed! %s", chartDir)
+	gitCommitSHA := gitPush(repoDir, gitUsername, token, revision)
+	// c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed!\n%s\nGit commit: %v/commit/%v\nArgoCD: %v", chartDir, gitUrl, gitCommitSHA, argoCDUrl)
+	// c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed!\n\nGit commit: %v/commit/%v\nArgoCD: %v", gitUrl, gitCommitSHA, argoCDUrl)
+	gitCommitUrl := fmt.Sprintf("%v/commit/%v", gitUrl, gitCommitSHA)
+	c.HTML(http.StatusOK, "result.tmpl", gin.H{"giturl": gitCommitUrl, "argoCDurl": argoCDurl})
 }
 
 type ArgoCDApp struct {

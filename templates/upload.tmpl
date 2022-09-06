@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Upload Cluster-API Workload Cluster Manifests</title>
+</head>
+<body>
+    <h1>Upload Cluster-API Workload Cluster Manifests</h1>
+    <h3>{{ .msg }}</h3>
+
+    <h4>Upload CAPI workload cluster manifests</h4>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        Name: <input type="text" name="name"><br>
+        Email: <input type="email" name="email"><br>
+        File: <input type="file" name="file"><br><br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
