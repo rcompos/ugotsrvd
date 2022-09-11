@@ -112,7 +112,7 @@ func Create(c *gin.Context) {
 	// Create ArgoCD application yaml from template
 	appChartName := chartname + "-app"
 	templateFile := "argocd-templates/argocd-application.yaml"
-	pathToApp := CreateArgoCDApp(appChartName, templateFile, appsBaseDir)
+	pathToApp := CreateArgoCDApp(appChartName, chartname, templateFile, appsBaseDir)
 	log.Println("pathToApp:", pathToApp)
 
 	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir)
@@ -141,6 +141,7 @@ func Create(c *gin.Context) {
 
 type ArgoCDApp struct {
 	Appname              string
+	HelmChart            string
 	Namespace            string
 	Project              string
 	RepoURL              string
@@ -153,9 +154,10 @@ type ArgoCDApp struct {
 	DestinationNamespace string
 }
 
-func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
+func CreateArgoCDApp(appname, helmchart, templateFile, appsBaseDir string) string {
 	// TODO: Add more template params
 	log.Println("appname:", appname)
+	log.Println("helmchart:", helmchart)
 	log.Println("templateFile:", templateFile)
 	log.Println("appsBaseDir:", appsBaseDir)
 
@@ -175,8 +177,9 @@ func CreateArgoCDApp(appname, templateFile, appsBaseDir string) string {
 
 	data := ArgoCDApp{
 		Appname:        appname,
+		HelmChart:      helmchart,
 		Project:        "default",
-		RepoURL:        "https://github.com/rcompos/autocharts",
+		RepoURL:        "https://github.com/rcompos/autocharts.git",
 		TargetRevision: "main",
 		Path:           appname,
 		ReleaseName:    appname,
@@ -230,6 +233,17 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 		return ""
 	}
 	log.Println(string(outClearValues))
+
+	// Clear out test templates
+	cmdClearTests := fmt.Sprintf("cd %v/%v; rm -fr ./templates/tests ./templates/NOTES.txt", chartsDir, chartName)
+	log.Println(cmdClearTests)
+	outClearTests, errClearTests := exec.Command("bash", "-c", cmdClearTests).Output()
+	if errClearTests != nil {
+		log.Printf("Failed to execute command: %s", cmdClearTests)
+		log.Printf("Error: %v", errClearTests)
+		return ""
+	}
+	log.Println(string(outClearTests))
 
 	// Copy new yaml to templates
 	cmdCopyYaml := fmt.Sprintf("cp -a %v %v/%v/templates", yamlFile, chartsDir, chartName)

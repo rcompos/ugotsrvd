@@ -19,10 +19,25 @@ spec:
     # repoURL: https://github.com/argoproj/argocd-example-apps.git  # Can point to either a Helm chart repo or a git repo.
     repoURL: {{ .RepoURL }} # Can point to either a Helm chart repo or a git repo.
     targetRevision: {{ .TargetRevision }}  # For Helm, this refers to the chart version.
-    path: {{ .Appname }}  # This has no meaning for Helm charts pulled directly from a Helm repo instead of git.
+    path: {{ .HelmChart }}  # This has no meaning for Helm charts pulled directly from a Helm repo instead of git.
+
+    # helm specific config
+    chart: {{ .HelmChart }} # Set this when pulling directly from a Helm repo. DO NOT set for git-hosted Helm charts.
+    helm:
+      # passCredentials: false # If true then adds --pass-credentials to Helm commands to pass credentials to all domains
+      # # Extra parameters to set (same as setting through values.yaml, but these take precedence)
+      # parameters:
+      # - name: "nginx-ingress.controller.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
+      #   value: mydomain.example.com
+      # - name: "ingress.annotations.kubernetes\\.io/tls-acme"
+      #   value: "true"
+      #   forceString: true # ensures that value is treated as a string
+
+      # - name: config
+      #   path: files/config.json
 
       # Release name override (defaults to application name)
-      releaseName: {{ .ReleaseName }}
+      # releaseName: {{ .ReleaseName }}
 
       # Helm values files for overriding values in the helm chart
       # The path is relative to the spec.source.path directory defined above
