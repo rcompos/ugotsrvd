@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/gin-gonic/gin"
@@ -115,6 +116,7 @@ func Create(c *gin.Context) {
 	pathToApp := CreateArgoCDApp(appChartName, chartname, templateFile, appsBaseDir)
 	log.Println("pathToApp:", pathToApp)
 
+	// Create Helm chart for ArgoCD application
 	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir)
 	log.Println("pathToAppChart:", pathToAppChart)
 
@@ -127,7 +129,20 @@ func Create(c *gin.Context) {
 	}
 	copyToRepo(pathToAppChart, repoDir)
 
-	filesToAdd := []string{chartname, appChartName}
+	appOfAppName := "proj-workload-clusters"
+	deployEnv := "ksa-poc"
+	successfulAdd := checkAppInArgoCDAppOfApps(chartname, appOfAppName, repoDir, deployEnv)
+	if successfulAdd == false {
+		c.String(http.StatusOK, "ERROR: Existing ArgoCD application exists: %s", chartname)
+		return
+	}
+
+	// Add to ArgoCD app-of-apps
+	appOfAppValuesFile := fmt.Sprintf("%v/%v/env/%v/values.yaml", repoDir, appOfAppName, deployEnv)
+	appOfAppValuesFileShort := fmt.Sprintf("%v/env/%v/values.yaml", appOfAppName, deployEnv)
+	addAppToArgoCDAppOfApps(chartname, appOfAppName, repoDir, appOfAppValuesFile, deployEnv)
+
+	filesToAdd := []string{chartname, appChartName, appOfAppValuesFileShort}
 	messageAppChart := "Add new ArgoCD app." + appChartName
 	gitCommit(repoDir, messageAppChart, filesToAdd)
 
@@ -137,6 +152,97 @@ func Create(c *gin.Context) {
 	// c.String(http.StatusOK, "CAPI Workload Cluster Helm and ArgoCD app charts pushed!\n\nGit commit: %v/commit/%v\nArgoCD: %v", gitUrl, gitCommitSHA, argoCDUrl)
 	gitCommitUrl := fmt.Sprintf("%v/commit/%v", gitUrl, gitCommitSHA)
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{"giturl": gitCommitUrl, "argoCDurl": argoCDurl})
+}
+
+func addAppToArgoCDAppOfApps(chartname, appOfAppName, repoDir, appOfAppValuesFile, deployEnv string) {
+	// TODO: Need to refactor for safer addition of yaml
+	appsNameString := strings.Replace(chartname, "-", "", -1)
+
+	nameString := fmt.Sprintf("name: %s\n", chartname)
+	fullnameOverrideString := "fullnameOverride: \"\"\n"
+	valuesString := "values: \"\"\n"
+	namespaceString := "namespace: \"\"\n"
+	repoString := "repo: \"\"\n"
+	pathString := "path: \"\"\n"
+	targetRevString := "targetRev: \"\"\n"
+
+	newAppString := "\n  " + appsNameString + ":\n" +
+		"    " + nameString +
+		"    " + fullnameOverrideString +
+		"    " + valuesString +
+		"    " + namespaceString +
+		"    " + repoString +
+		"    " + pathString +
+		"    " + targetRevString
+
+	log.Println(newAppString)
+
+	// TODO: Update Chart.yaml with new version
+
+	log.Println("appOfAppsValuesFile: ", appOfAppValuesFile)
+
+	f, err := os.OpenFile(appOfAppValuesFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	if _, err := f.WriteString(newAppString); err != nil {
+		log.Println(err)
+	}
+}
+
+func checkAppInArgoCDAppOfApps(chartname, appOfAppName, repoDir, deployEnv string) bool {
+	// Add to existing ArgoCD App-of-Apps
+	// look at file repoDir/proj-workload-clusters/env/ksa-poc/values.yaml
+	appOfAppValuesFile := fmt.Sprintf("%v/%v/env/%v/values.yaml", repoDir, appOfAppName, deployEnv)
+	if !fileExists(appOfAppValuesFile) {
+		log.Println("App-of-app values file not found!", appOfAppValuesFile)
+		// c.String(http.StatusOK, "App-of-app values file not found! %s", appOfAppValuesFile)
+		return false
+	}
+
+	cmdCatValues := fmt.Sprintf("cat %v", appOfAppValuesFile)
+	log.Println(cmdCatValues)
+	outCatValues, errCatValues := exec.Command("bash", "-c", cmdCatValues).Output()
+	if errCatValues != nil {
+		log.Printf("Failed to execute command: %s", cmdCatValues)
+		log.Printf("Error: %v", errCatValues)
+		return false
+	}
+	log.Println(string(outCatValues))
+
+	// Check for existence of apps.MYAPPNAME
+	// cat ~/work/ugotsrvd-work/autocharts/proj-workload-clusters/env/ksa-poc/values.yaml | yq .apps.dataengDev0Cornholio2022aws.name
+	cmdExistingApps := fmt.Sprintf("cat %v |  yq '.apps.[].name'", appOfAppValuesFile)
+	log.Println(cmdExistingApps)
+	tmpExistingApps, errExistingApps := exec.Command("bash", "-c", cmdExistingApps).Output()
+	outExistingApps := string(tmpExistingApps)
+
+	if errExistingApps != nil {
+		log.Printf("Failed to execute command: %s", cmdExistingApps)
+		log.Printf("Error: %v", errExistingApps)
+		return false
+	}
+	log.Printf("Existing applications:\n%v\n", string(outExistingApps))
+
+	for _, v := range strings.Split(outExistingApps, "\n") {
+		log.Printf("Existing app in app-of-apps %v: %v\n", appOfAppName, v)
+		if string(v) == chartname {
+			log.Println("ArgoCD app-of-apps:", appOfAppName)
+			log.Println("ERROR: Existing ArgoCD application exists:", chartname)
+			// Return without creating new app
+			// c.String(http.StatusOK, "Existing app in app-of-apps %v! %v", appOfAppName, chartname)
+			return false
+		}
+	}
+
+	// Add block to app-of-app values.yaml for new Helm chart
+	//
+	//
+	// // Add to app-of-apps
+
+	return true
+
 }
 
 type ArgoCDApp struct {
@@ -153,6 +259,10 @@ type ArgoCDApp struct {
 	DestinationServer    string
 	DestinationNamespace string
 }
+
+// TODO: Instantiate the ArgoCD app-of-apps helm chart
+// func CreateArgoCDAppOfApps(appname, helmchart, templateFile, appsBaseDir string) string {
+// }
 
 func CreateArgoCDApp(appname, helmchart, templateFile, appsBaseDir string) string {
 	// TODO: Add more template params
