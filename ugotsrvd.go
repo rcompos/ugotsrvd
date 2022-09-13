@@ -14,10 +14,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const uploadDir = "/Users/composr/work/ugotsrvd-data/upload"
-const chartsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/charts"
-const appsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/apps"
-const repoBaseDir = "/Users/composr/work/ugotsrvd-data/repos"
+// const uploadDir = "/Users/composr/work/ugotsrvd-data/upload"
+// const chartsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/charts"
+// const appsBaseDir = "/Users/composr/work/ugotsrvd-data/generated/apps"
+// const repoBaseDir = "/Users/composr/work/ugotsrvd-data/repos"
+
+const uploadDir = "/Users/roncompos/work/ugotsrvd-data/upload"
+const chartsBaseDir = "/Users/roncompos/work/ugotsrvd-data/generated/charts"
+const appsBaseDir = "/Users/roncompos/work/ugotsrvd-data/generated/apps"
+const repoBaseDir = "/Users/roncompos/work/ugotsrvd-data/repos"
 
 const gitRepo = "autocharts"
 const gitAccount = "https://github.com/rcompos"
@@ -76,6 +81,9 @@ func Create(c *gin.Context) {
 	log.Println("Config files:\n", fileList)
 	file := c.PostForm("file")
 
+	appOfAppName := "proj-workload-clusters"
+	deployEnv := "ksa-poc"
+
 	filename := uploadDir + "/" + file
 	// gitRepo := "autocharts"
 	// gitUrl := "https://github.com/rcompos/" + gitRepo
@@ -97,7 +105,7 @@ func Create(c *gin.Context) {
 
 	// Cluster-API Cluster Helm Chart
 	// Create Helm chart
-	pathToChart := createHelmChart(chartname, filename, chartsBaseDir)
+	pathToChart := createHelmChart(chartname, filename, chartsBaseDir, deployEnv)
 	log.Println("pathToChart:", pathToChart)
 
 	// Check if chart already exists
@@ -117,7 +125,7 @@ func Create(c *gin.Context) {
 	log.Println("pathToApp:", pathToApp)
 
 	// Create Helm chart for ArgoCD application
-	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir)
+	pathToAppChart := createHelmChart(appChartName, pathToApp, appsBaseDir, deployEnv)
 	log.Println("pathToAppChart:", pathToAppChart)
 
 	// Check if chart already exists
@@ -129,8 +137,6 @@ func Create(c *gin.Context) {
 	}
 	copyToRepo(pathToAppChart, repoDir)
 
-	appOfAppName := "proj-workload-clusters"
-	deployEnv := "ksa-poc"
 	successfulAdd := checkAppInArgoCDAppOfApps(chartname, appOfAppName, repoDir, deployEnv)
 	if successfulAdd == false {
 		c.String(http.StatusOK, "ERROR: Existing ArgoCD application exists: %s", chartname)
@@ -307,7 +313,7 @@ func CreateArgoCDApp(appname, helmchart, templateFile, appsBaseDir string) strin
 	return argoCDAppFile
 }
 
-func createHelmChart(chartName, yamlFile, chartsDir string) string {
+func createHelmChart(chartName, yamlFile, chartsDir, deployEnv string) string {
 	// chartName: Helm chart name
 	// yamlFile: YAML file
 	// chartsDir: Directory for Helm charts
@@ -343,6 +349,17 @@ func createHelmChart(chartName, yamlFile, chartsDir string) string {
 		return ""
 	}
 	log.Println(string(outClearValues))
+
+	// Create env-specific values file
+	cmdEnvValues := fmt.Sprintf("echo -n \"\" > %v/%v/values-%v.yaml", chartsDir, chartName, deployEnv)
+	log.Println(cmdEnvValues)
+	outEnvValues, errEnvValues := exec.Command("bash", "-c", cmdEnvValues).Output()
+	if errEnvValues != nil {
+		log.Printf("Failed to execute command: %s", cmdEnvValues)
+		log.Printf("Error: %v", errEnvValues)
+		return ""
+	}
+	log.Println(string(outEnvValues))
 
 	// Clear out test templates
 	cmdClearTests := fmt.Sprintf("cd %v/%v; rm -fr ./templates/tests ./templates/NOTES.txt", chartsDir, chartName)
